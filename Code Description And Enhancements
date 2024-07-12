@@ -1,0 +1,176 @@
+So we have created a "System which can analyze"the TSV file and based on the requirement we get the appropriate result 
+CodeExplanation:
+Firstly we have loaded the file into a pandas dataframe this enables us to walk through the columns of data and we have created a function which can convert the string type column created_dt to datetime in order to overcome the value error as shown below 
+
+def convert_to_datetime(data): 
+data['created_at'] = pd.to_datetime(data['created_at'], utc=True,errors='coerce')
+    return data
+
+this function mainly focuses on grouping the data based on created_at columns and then calculates the count for no.of Tweets per day 
+def tweets_per_day(data):
+    data['date'] = pd.to_datetime(data['created_at'],utc=True, errors='coerce')
+    data['date_extract'] = data['date'].dt.date
+    tweets_count_per_day = data[data['text'].str.contains('music', case=False, na=False)].groupby('date_extract').size()
+    return tweets_count_per_day
+
+this piece of code mainly focuses on the finding the unique users for this we chose author_id assuming that they are users and them we used nunique function of pandas to extract the uniques 
+def unique_users(data):
+    unique_user_count = data[data['text'].str.contains('music', case=False, na=False)]['author_id'].nunique()
+    return unique_user_count
+
+pandas has a functionality called mean which gives the average of set of values using that feature in the below function we have generated the likes
+def average_likes(data):
+    average_likes_value = data[data['text'].str.contains('music', case=False, na=False)]['author_follower_count'].mean()
+    return average_likes_value
+
+in this function we have used value_counts() on the source column assuming source as locations and got the counts 
+def tweet_locations(data):
+    tweet_locations_details = data[data['text'].str.contains('music', case=False, na=False)]['source'].value_counts()
+    return tweet_locations_details
+ this function mainly focuses on grouping the data based on created_at columns and then calculates the count for Tweets per hour 
+def tweet_times(data):
+    data['hour'] = data['created_at'].dt.hour
+    tweet_times_details = data[data['text'].str.contains('music', case=False, na=False)].groupby('hour').size()
+    return tweet_times_details
+
+using the idxmax we can get max value and the corresponding author with the max coun and generated the most active user
+def most_active_user(data):
+    most_active_user_details = data[data['text'].str.contains('music', case=False, na=False)]['author_id'].value_counts().idxmax()
+    return most_active_user_details
+
+
+loading data file 
+file_path = 'C:/Users/Rakesh/Downloads/Copy_of_correct_twitter_201904.tsv'
+data = load_data(file_path)
+
+data = convert_to_datetime(data)
+
+
+if data['created_at'].isna().any():
+    print("Some datetime conversions failed.")
+else:
+    print("Datetime conversion successful.")
+
+Executions for each function defined 
+print("Tweets_per_day:")
+print(tweets_per_day(data))
+
+print("Unique_users:")
+print(unique_users(data))
+
+print("Average_likes:")
+print(average_likes(data))
+
+print("Tweet_locations:")
+print(tweet_locations(data))
+
+print("Tweet_times:")
+print(tweet_times(data))
+
+print("Most_active_user:")
+print(most_active_user(data))
+
+
+=================================================================================================================================================================================
+  We can also do the same using the MongoDb 
+  Here are the following queries which can fetch the appropriate results 
+
+
+db.tweets.aggregate([
+    {
+        $match: {
+            text: { $regex: "britney spears", $options: "i" }
+        }
+    },
+    {
+        $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { _id: 1 }
+    }
+]);
+How many unique users posted a tweet containing the term?
+db.tweets.aggregate([
+    {
+        $match: {
+            text: { $regex: "britney spears", $options: "i" }
+        }
+    },
+    {
+        $group: {
+            _id: "$author_id"
+        }
+    },
+    {
+        $count: "unique_users"
+    }
+]);
+
+How many likes did tweets containing the term get, on average?
+db.tweets.aggregate([
+    {
+        $match: {
+            text: { $regex: "britney spears", $options: "i" }
+        }
+    },
+    {
+        $group: {
+            _id: null,
+            averageLikes: { $avg: "$likes" }
+        }
+    }
+]);
+Where (in terms of place IDs) did the tweets come from?
+db.tweets.aggregate([
+    {
+        $match: {
+            text: { $regex: "britney spears", $options: "i" }
+        }
+    },
+    {
+        $group: {
+            _id: "$place_id",
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { count: -1 }
+    }
+]);
+Which user posted the most tweets containing the term?
+db.tweets.aggregate([
+    {
+        $match: {
+            text: { $regex: "britney spears", $options: "i" }
+        }
+    },
+    {
+        $group: {
+            _id: "$author_id",
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { count: -1 }
+    },
+    {
+        $limit: 1
+    }
+]);
+====================================================================================================================================================================
+  using the pymongo Library we can connect to MongoDB and then call the above queries to run on it facilitating the automation as well 
+=====================================================================================================================================================================
+ 
+
+
+
+
+
+    
+  
+
+
+    
